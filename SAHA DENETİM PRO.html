@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>İSG Saha Pro v11.8.2</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="data:application/json,{'display':'standalone','name':'İSG Saha Pro','short_name':'İSG Pro'}">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #2563eb; --success: #16a34a; --warning: #eab308; --danger: #dc2626; --dark: #1e293b; --bg: #f1f5f9; --today: #8b5cf6; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: #1e293b; }
+        .app-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
+        .stats-panel { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+        .stat-card { background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; }
+        .stat-card span { display: block; font-size: 10px; color: #64748b; font-weight: 700; }
+        .stat-card b { font-size: 18px; }
+        .reset-month-btn { width: 100%; background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; padding: 8px; border-radius: 10px; font-size: 11px; font-weight: 700; margin-bottom: 15px; cursor: pointer; }
+        .today-section { background: #f5f3ff; border: 2px solid var(--today); padding: 15px; border-radius: 15px; margin-bottom: 20px; }
+        .today-title { color: var(--today); font-weight: 800; font-size: 13px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .progress-container { background: #e2e8f0; height: 10px; border-radius: 5px; margin-bottom: 15px; overflow: hidden; }
+        #progressBar { background: linear-gradient(90deg, var(--success), #4ade80); height: 100%; width: 0%; transition: 1s; }
+        .search-box input { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; outline: none; font-size: 16px; box-sizing: border-box; }
+        .input-box { background: #f8fafc; padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px dashed #cbd5e1; }
+        .input-box input { width: 100%; padding: 10px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .group-header { background: var(--dark); color: white; padding: 10px 15px; border-radius: 10px; margin: 25px 0 10px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .firm-item { display: flex; justify-content: space-between; padding: 12px; border: 1px solid #f1f5f9; border-radius: 15px; margin-bottom: 8px; background: white; border-left: 6px solid #cbd5e1; align-items: center; }
+        .status-V { border-left-color: var(--success); background: #f0fdf4; }
+        .status-K { border-left-color: var(--warning); background: #fefce8; }
+        .status-M { border-left-color: var(--danger); background: #fef2f2; }
+        .action-btns { display: flex; gap: 4px; }
+        button { cursor: pointer; border: none; border-radius: 8px; font-weight: 700; transition: 0.2s; }
+        .btn-small { width: 32px; height: 32px; font-size: 12px; display: flex; align-items: center; justify-content: center; color: white; }
+        .v-btn { background: var(--success); }
+        .k-btn { background: var(--warning); color: #854d0e; }
+        .m-btn { background: var(--danger); }
+        .wp-btn { background: #25d366; font-size: 10px; }
+        .del-btn { background: #fee2e2; color: var(--danger); font-size: 14px; }
+        .plan-btn { background: var(--today); color: white; padding: 4px 8px; font-size: 11px; }
+        #importArea { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; padding:20px; box-sizing: border-box; }
+        .modal { background: white; max-width: 500px; margin: auto; padding: 20px; border-radius: 16px; }
+    </style>
+</head>
+<body>
+
+<div id="importArea">
+    <div class="modal">
+        <h3 id="modalTitle">Veri İşlemi</h3>
+        <textarea id="importText" style="width:100%; height:200px; margin-bottom:10px; font-family: monospace; font-size: 12px;"></textarea>
+        <button id="modalActionBtn" onclick="processImport()" style="background:var(--primary); color:white; width:100%; padding:12px;">Yükle</button>
+        <button onclick="document.getElementById('importArea').style.display='none'" style="width:100%; margin-top:5px; background: #ccc; padding:10px;">Kapat</button>
+    </div>
+</div>
+
+<div class="app-container">
+    <h2 style="text-align:center; margin-bottom:15px; font-size: 20px;">👷 İSG Saha Pro v11.8.2</h2>
+    
+    <div class="stats-panel">
+        <div class="stat-card"><span>PERFORMANS</span><b id="percCount">%0</b></div>
+        <div class="stat-card" style="color:var(--success)"><span>BİTEN</span><b id="doneCount">0</b></div>
+        <div class="stat-card" style="color:var(--danger)"><span>KALAN</span><b id="remainCount">0</b></div>
+    </div>
+    <div class="progress-container"><div id="progressBar"></div></div>
+    
+    <button class="reset-month-btn" onclick="resetMonth()">📅 TÜM AYI SIFIRLA / YENİ AYA GEÇ</button>
+
+    <div id="todayContainer" class="today-section" style="display:none;">
+        <div class="today-title">
+            <span>📍 BUGÜN GİDİLECEK GRUP</span>
+            <button onclick="clearPlan()" style="background:none; color:red; font-size:10px; border:1px solid red; padding:2px 5px; border-radius:4px;">TEMİZLE</button>
+        </div>
+        <div id="todayList"></div>
+    </div>
+
+    <div class="search-box"><input type="text" id="searchInput" onkeyup="render()" placeholder="🔍 Firma veya Grup Ara..."></div>
+
+    <div class="input-box">
+        <input type="text" id="fName" placeholder="Firma Adı">
+        <input type="text" id="fGroup" list="existingGroups" placeholder="Grup (Örn: 1. GRUP)">
+        <datalist id="existingGroups"></datalist>
+        <button onclick="addFirm()" style="background:var(--primary); color:white; width:100%; padding:12px; font-size: 14px;">➕ LİSTEYE FİRMA EKLE</button>
+    </div>
+
+    <div id="list"></div>
+
+    <div style="margin-top:25px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <button onclick="exportData()" style="background:var(--success); color:white; padding:12px;">📊 EXCEL RAPORU</button>
+        <button onclick="copyBackup()" style="background:#64748b; color:white; padding:10px; font-size:10px;">📋 YEDEK KOPYALA</button>
+        <button onclick="openImport()" style="background:#64748b; color:white; padding:10px; font-size:10px;">📥 YEDEK YÜKLE</button>
+    </div>
+</div>
+
+<script>
+    let storageKey = 'isg_pro_v11';
+    let firms = JSON.parse(localStorage.getItem(storageKey)) || [];
+    let emptyGroups = JSON.parse(localStorage.getItem('isg_empty_groups')) || [];
+    let plannedGroups = JSON.parse(localStorage.getItem('isg_planned_groups')) || [];
+
+    // Pencere adını sabitle (PC'de aynı sekmede kalmaya yardımcı olur)
+    window.name = "isg_main_window";
+
+    function save() { 
+        localStorage.setItem(storageKey, JSON.stringify(firms)); 
+        localStorage.setItem('isg_empty_groups', JSON.stringify(emptyGroups));
+        localStorage.setItem('isg_planned_groups', JSON.stringify(plannedGroups));
+    }
+
+    function addFirm(targetGroup = null) {
+        const name = targetGroup ? prompt(`${targetGroup} için Firma Adı:`) : document.getElementById('fName').value.trim();
+        const group = targetGroup || document.getElementById('fGroup').value.trim();
+        if(!name || !group) return;
+        firms.push({ id: Date.now(), name, group, status: '', date: '', lastVisitTS: null, note: '', phone: '' });
+        emptyGroups = emptyGroups.filter(g => g !== group);
+        save(); if(!targetGroup) document.getElementById('fName').value = ''; render();
+    }
+
+    function resetMonth() {
+        if(confirm("TÜM AYI SIFIRLAMAK ÜZERESİNİZ! Emin misiniz?")) {
+            firms = firms.map(f => ({...f, status: '', date: '', lastVisitTS: null}));
+            plannedGroups = []; save(); render();
+        }
+    }
+
+    function deleteGroup(groupName) {
+        const groupHasFirms = firms.some(f => f.group === groupName);
+        if (groupHasFirms) {
+            if(confirm(`${groupName} grubundaki TÜM firmaları silmek istiyor musunuz?`)) {
+                firms = firms.filter(f => f.group !== groupName);
+                if (!emptyGroups.includes(groupName)) emptyGroups.push(groupName);
+                save(); render();
+            }
+        } else {
+            if(confirm(`${groupName} başlığı tamamen silinsin mi?`)) {
+                emptyGroups = emptyGroups.filter(g => g !== groupName);
+                plannedGroups = plannedGroups.filter(g => g !== groupName);
+                save(); render();
+            }
+        }
+    }
+
+    function toggleGroupPlan(g) {
+        if(plannedGroups.includes(g)) plannedGroups = plannedGroups.filter(x => x !== g);
+        else plannedGroups.push(g);
+        save(); render();
+    }
+
+    function clearPlan() { plannedGroups = []; save(); render(); }
+
+    function sendWP(id) {
+        const f = firms.find(x => x.id === id);
+        const currentPhone = f.phone || "90";
+        const newPhone = prompt("WhatsApp Numarasını Güncelle (905...):", currentPhone);
+        if (newPhone !== null) { f.phone = newPhone; save(); }
+        if(!f.phone || f.phone === "90") { alert("Numara girmediniz."); return; }
+        const msgText = `Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\n*Abdurrahman PEHLİVAN*\nA Sınıfı İş Güv. Uzm.\n_AREL OSGB_`;
+        
+        // 'isg_wp' ismiyle açarak her seferinde yeni sekme açmasını engelledik
+        window.open(`https://wa.me/${f.phone}?text=${encodeURIComponent(msgText)}`, 'isg_wp');
+        render();
+    }
+
+    function setStatus(id, stat) {
+        const i = firms.findIndex(f => f.id === id);
+        if(firms[i].status === stat) firms[i].status = '';
+        else { 
+            firms[i].status = stat; 
+            firms[i].date = new Date().toLocaleDateString('tr-TR'); 
+            firms[i].lastVisitTS = Date.now();
+        }
+        save(); render();
+    }
+
+    function render() {
+        const listDiv = document.getElementById('list');
+        const todayDiv = document.getElementById('todayList');
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const done = firms.filter(f => f.status !== '').length;
+        const total = firms.length;
+        const perc = total > 0 ? Math.round((done/total)*100) : 0;
+        document.getElementById('doneCount').innerText = done;
+        document.getElementById('remainCount').innerText = total - done;
+        document.getElementById('percCount').innerText = `%${perc}`;
+        document.getElementById('progressBar').style.width = perc + '%';
+        listDiv.innerHTML = ''; todayDiv.innerHTML = '';
+        let hasToday = false;
+        const allGroups = [...new Set([...firms.map(f => f.group), ...emptyGroups])].sort((a,b) => a.localeCompare(b, undefined, {numeric:true}));
+        
+        allGroups.forEach(g => {
+            const groupFirms = firms.filter(f => f.group === g);
+            const isPlanned = plannedGroups.includes(g);
+            const filteredFirms = groupFirms.filter(f => f.name.toLowerCase().includes(search) || g.toLowerCase().includes(search));
+            
+            if(search === '' || filteredFirms.length > 0 || g.toLowerCase().includes(search)) {
+                listDiv.innerHTML += `<div class="group-header"><span>📂 ${g}</span><div style="display:flex; gap:5px; align-items:center;"><button class="plan-btn" onclick="toggleGroupPlan('${g}')" style="background:${isPlanned?'#8b5cf6':'#666'}">${isPlanned?'★ Planda':'☆ Plana Al'}</button><button onclick="addFirm('${g}')" style="background:var(--success); color:white; padding:4px 8px; font-size:11px; border-radius:5px;">➕</button><button onclick="deleteGroup('${g}')" style="background:var(--danger); color:white; padding:4px 8px; font-size:11px; border-radius:5px;">🗑️</button></div></div>`;
+                filteredFirms.forEach(f => {
+                    const itemHtml = createFirmCard(f);
+                    listDiv.innerHTML += itemHtml;
+                    if(isPlanned) { todayDiv.innerHTML += itemHtml; hasToday = true; }
+                });
+            }
+        });
+        document.getElementById('todayContainer').style.display = hasToday ? 'block' : 'none';
+        document.getElementById('existingGroups').innerHTML = allGroups.map(g => `<option value="${g}">`).join('');
+    }
+
+    function createFirmCard(f) {
+        let diff = f.lastVisitTS ? Math.floor((Date.now() - f.lastVisitTS) / 86400000) : -1;
+        let alarm = diff > 30 ? 'color:red; font-weight:bold;' : '';
+        return `<div class="firm-item status-${f.status}"><div style="flex:1"><b onclick="editName(${f.id})" style="cursor:pointer; font-size:14px;">${f.name}</b><br><small style="font-size:10px; ${alarm}">${diff === -1 ? 'Hiç gidilmedi' : (diff === 0 ? 'Bugün gidildi' : diff + ' gün önce')}</small><div onclick="editNote(${f.id})" style="font-size:11px; color:#64748b; margin-top:4px; cursor:pointer;">📝 ${f.note || 'Not ekle...'}</div></div><div class="action-btns"><button class="btn-small wp-btn" onclick="sendWP(${f.id})">WP</button><button class="btn-small v-btn" onclick="setStatus(${f.id}, 'V')">G</button><button class="btn-small k-btn" onclick="setStatus(${f.id}, 'K')">K</button><button class="btn-small m-btn" onclick="setStatus(${f.id}, 'M')">X</button><button class="btn-small del-btn" onclick="delFirm(${f.id})">🗑️</button></div></div>`;
+    }
+
+    function delFirm(id) { if(confirm("Firmayı silmek istediğinize emin misiniz?")) { firms = firms.filter(f => f.id !== id); save(); render(); } }
+    
+    function editName(id) {
+        const i = firms.findIndex(f => f.id === id);
+        const newName = prompt("Firma İsmini Düzenle:", firms[i].name);
+        if(newName) { firms[i].name = newName; save(); render(); }
+    }
+
+    function editNote(id) {
+        const i = firms.findIndex(f => f.id === id);
+        const newNote = prompt("Notunuzu girin:", firms[i].note || "");
+        if(newNote !== null) { firms[i].note = newNote; save(); render(); }
+    }
+
+    function exportData() {
+        let csv = "GRUP\tFIRMA\tDURUM\tTARIH\tNOT\r\n";
+        firms.forEach(f => {
+            let s = f.status === 'V' ? 'GIDILDI' : (f.status === 'K' ? 'KIMSE YOK' : (f.status === 'M' ? 'GIDILEMEDI' : 'BEKLIYOR'));
+            csv += `${f.group}\t${f.name}\t${s}\t${f.date || '-'}\t${f.note || '-'}\r\n`;
+        });
+        const buffer = new Uint16Array(csv.length + 1); buffer[0] = 0xFEFF;
+        for (let i = 0; i < csv.length; i++) buffer[i+1] = csv.charCodeAt(i);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([buffer], {type:'text/csv;charset=utf-16le'}));
+        link.download = `ISG_Saha_Raporu.csv`; link.click();
+    }
+
+    function copyBackup() {
+        document.getElementById('importText').value = JSON.stringify({f:firms, eg:emptyGroups, pg:plannedGroups});
+        document.getElementById('importArea').style.display='block';
+    }
+
+    function openImport() {
+        document.getElementById('importText').value = "";
+        document.getElementById('importArea').style.display='block';
+    }
+
+    function processImport() {
+        try {
+            const data = JSON.parse(document.getElementById('importText').value);
+            firms = data.f || []; emptyGroups = data.eg || []; plannedGroups = data.pg || [];
+            save(); render(); document.getElementById('importArea').style.display='none';
+        } catch(e) { alert("Hata!"); }
+    }
+
+    render();
+</script>
+</body>
+</html>
