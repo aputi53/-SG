@@ -32,11 +32,12 @@
         .status-M { border-left-color: var(--danger); background: #fef2f2; }
         .action-btns { display: flex; gap: 4px; }
         button { cursor: pointer; border: none; border-radius: 8px; font-weight: 700; transition: 0.2s; }
-        .btn-small { width: 32px; height: 32px; font-size: 12px; display: flex; align-items: center; justify-content: center; color: white; }
+        .btn-small { width: 32px; height: 32px; font-size: 11px; display: flex; align-items: center; justify-content: center; color: white; }
         .v-btn { background: var(--success); }
         .k-btn { background: var(--warning); color: #854d0e; }
         .m-btn { background: var(--danger); }
-        .wp-btn { background: #25d366; font-size: 10px; }
+        .wp-btn { background: #25d366; }
+        .mail-btn { background: #0078d4; }
         .del-btn { background: #fee2e2; color: var(--danger); font-size: 14px; }
         .plan-btn { background: var(--today); color: white; padding: 4px 8px; font-size: 11px; }
         #importArea { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; padding:20px; box-sizing: border-box; }
@@ -98,7 +99,6 @@
     let emptyGroups = JSON.parse(localStorage.getItem('isg_empty_groups')) || [];
     let plannedGroups = JSON.parse(localStorage.getItem('isg_planned_groups')) || [];
 
-    // Pencere adını sabitle (PC'de aynı sekmede kalmaya yardımcı olur)
     window.name = "isg_main_window";
 
     function save() { 
@@ -111,7 +111,7 @@
         const name = targetGroup ? prompt(`${targetGroup} için Firma Adı:`) : document.getElementById('fName').value.trim();
         const group = targetGroup || document.getElementById('fGroup').value.trim();
         if(!name || !group) return;
-        firms.push({ id: Date.now(), name, group, status: '', date: '', lastVisitTS: null, note: '', phone: '' });
+        firms.push({ id: Date.now(), name, group, status: '', date: '', lastVisitTS: null, note: '', phone: '', email: '' });
         emptyGroups = emptyGroups.filter(g => g !== group);
         save(); if(!targetGroup) document.getElementById('fName').value = ''; render();
     }
@@ -153,11 +153,32 @@
         const currentPhone = f.phone || "90";
         const newPhone = prompt("WhatsApp Numarasını Güncelle (905...):", currentPhone);
         if (newPhone !== null) { f.phone = newPhone; save(); }
-        if(!f.phone || f.phone === "90") { alert("Numara girmediniz."); return; }
+        if(!f.phone || f.phone === "90") { return; }
         const msgText = `Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\n*Abdurrahman PEHLİVAN*\nA Sınıfı İş Güv. Uzm.\n_AREL OSGB_`;
-        
-        // 'isg_wp' ismiyle açarak her seferinde yeni sekme açmasını engelledik
         window.open(`https://wa.me/${f.phone}?text=${encodeURIComponent(msgText)}`, 'isg_wp');
+        render();
+    }
+
+    function sendMail(id) {
+        const f = firms.find(x => x.id === id);
+        const currentMail = f.email || "";
+        const newMail = prompt("Firma E-posta Adresi (Güncelleme için girin):", currentMail);
+        
+        if (newMail !== null) { 
+            f.email = newMail; 
+            save(); 
+        }
+
+        if(!f.email) {
+            alert("E-posta adresi girilmedi.");
+            return;
+        }
+
+        const today = new Date().toLocaleDateString('tr-TR');
+        const subject = `İSG Saha Ziyareti Gerçekleştirilememesi Hakkında - ${f.name}`;
+        const body = `Sayın Yetkili,\n\nFirmanıza planlanan rutin İş Sağlığı ve Güvenliği saha ziyareti için bugün (${today}) gelindiği / iletişime geçildiği; ancak işletmenin kapalı olması veya yetkililere ulaşılamaması sebebiyle işyeri kontrolleri ve iş güvenliği faaliyetleri gerçekleştirilememiştir.\n\nİlgili aya ait ziyaret planlaması bu nedenle tamamlanamamış olup, bir sonraki program dahilinde ziyaretiniz tekrar planlanacaktır.\n\nBilgilerinize sunar, iyi çalışmalar dileriz.\n\nAbdurrahman PEHLİVAN\nA Sınıfı İş Güv. Uzm.\nAREL OSGB`;
+        
+        window.location.href = `mailto:${f.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         render();
     }
 
@@ -208,7 +229,7 @@
     function createFirmCard(f) {
         let diff = f.lastVisitTS ? Math.floor((Date.now() - f.lastVisitTS) / 86400000) : -1;
         let alarm = diff > 30 ? 'color:red; font-weight:bold;' : '';
-        return `<div class="firm-item status-${f.status}"><div style="flex:1"><b onclick="editName(${f.id})" style="cursor:pointer; font-size:14px;">${f.name}</b><br><small style="font-size:10px; ${alarm}">${diff === -1 ? 'Hiç gidilmedi' : (diff === 0 ? 'Bugün gidildi' : diff + ' gün önce')}</small><div onclick="editNote(${f.id})" style="font-size:11px; color:#64748b; margin-top:4px; cursor:pointer;">📝 ${f.note || 'Not ekle...'}</div></div><div class="action-btns"><button class="btn-small wp-btn" onclick="sendWP(${f.id})">WP</button><button class="btn-small v-btn" onclick="setStatus(${f.id}, 'V')">G</button><button class="btn-small k-btn" onclick="setStatus(${f.id}, 'K')">K</button><button class="btn-small m-btn" onclick="setStatus(${f.id}, 'M')">X</button><button class="btn-small del-btn" onclick="delFirm(${f.id})">🗑️</button></div></div>`;
+        return `<div class="firm-item status-${f.status}"><div style="flex:1"><b onclick="editName(${f.id})" style="cursor:pointer; font-size:14px;">${f.name}</b><br><small style="font-size:10px; ${alarm}">${diff === -1 ? 'Hiç gidilmedi' : (diff === 0 ? 'Bugün gidildi' : diff + ' gün önce')}</small><div onclick="editNote(${f.id})" style="font-size:11px; color:#64748b; margin-top:4px; cursor:pointer;">📝 ${f.note || 'Not ekle...'}</div></div><div class="action-btns"><button class="btn-small wp-btn" onclick="sendWP(${f.id})">WP</button><button class="btn-small mail-btn" onclick="sendMail(${f.id})">M</button><button class="btn-small v-btn" onclick="setStatus(${f.id}, 'V')">G</button><button class="btn-small k-btn" onclick="setStatus(${f.id}, 'K')">K</button><button class="btn-small m-btn" onclick="setStatus(${f.id}, 'M')">X</button><button class="btn-small del-btn" onclick="delFirm(${f.id})">🗑️</button></div></div>`;
     }
 
     function delFirm(id) { if(confirm("Firmayı silmek istediğinize emin misiniz?")) { firms = firms.filter(f => f.id !== id); save(); render(); } }
@@ -226,10 +247,10 @@
     }
 
     function exportData() {
-        let csv = "GRUP\tFIRMA\tDURUM\tTARIH\tNOT\r\n";
+        let csv = "GRUP\tFIRMA\tDURUM\tTARIH\tNOT\tMAIL\r\n";
         firms.forEach(f => {
             let s = f.status === 'V' ? 'GIDILDI' : (f.status === 'K' ? 'KIMSE YOK' : (f.status === 'M' ? 'GIDILEMEDI' : 'BEKLIYOR'));
-            csv += `${f.group}\t${f.name}\t${s}\t${f.date || '-'}\t${f.note || '-'}\r\n`;
+            csv += `${f.group}\t${f.name}\t${s}\t${f.date || '-'}\t${f.note || '-'}\t${f.email || '-'}\r\n`;
         });
         const buffer = new Uint16Array(csv.length + 1); buffer[0] = 0xFEFF;
         for (let i = 0; i < csv.length; i++) buffer[i+1] = csv.charCodeAt(i);
