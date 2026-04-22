@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>İSG Saha Pro v12.0.4</title>
+    <title>İSG Saha Pro v12.0.5</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #2563eb; --success: #16a34a; --warning: #eab308; --danger: #dc2626; --dark: #1e293b; --bg: #f1f5f9; --today: #8b5cf6; }
         body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 10px; color: #1e293b; }
         .app-container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
         
-        /* Planlanmış Alan */
         .today-section { background: #fdf4ff; border: 2px solid #f5d0fe; padding: 15px; border-radius: 15px; margin-bottom: 20px; }
         .today-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 800; color: var(--today); font-size: 13px; }
 
@@ -36,7 +35,7 @@
         .name-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .firm-name { font-size: 16px; font-weight: 800; color: #1e293b; text-transform: uppercase; cursor: pointer; flex: 1; }
         
-        .firm-note-box { font-size: 14px; color: #475569; background: #f8fafc; padding: 12px; border-radius: 10px; margin-top: 10px; cursor: pointer; border: 1px solid #e2e8f0; line-height: 1.4; }
+        .firm-note-box { font-size: 14px; color: #475569; background: #f8fafc; padding: 12px; border-radius: 10px; margin-top: 10px; cursor: pointer; border: 1px solid #e2e8f0; min-height: 20px; }
 
         .action-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
         button { cursor: pointer; border: none; border-radius: 8px; font-weight: 700; transition: 0.2s; }
@@ -68,7 +67,7 @@
 </div>
 
 <div class="app-container">
-    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.0.4</h2>
+    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.0.5</h2>
     
     <div class="stats-panel">
         <div class="stat-card"><span>PERFORMANS</span><b id="percCount">%0</b></div>
@@ -77,7 +76,7 @@
     </div>
     <div class="progress-container"><div id="progressBar"></div></div>
     
-    <button onclick="resetMonth()" style="width:100%; background:#fef2f2; color:var(--danger); border:1px solid #fee2e2; padding:12px; border-radius:12px; font-weight:800; margin-bottom:20px;">📅 YENİ AYA GEÇ (SIFIRLA)</button>
+    <button onclick="resetMonth()" style="width:100%; background:#fef2f2; color:var(--danger); border:1px solid #fee2e2; padding:12px; border-radius:12px; font-weight:800; margin-bottom:20px;">📅 YENİ AYA GEÇ (ARŞİVLE)</button>
 
     <div id="plannedContainer" class="today-section" style="display:none;">
         <div class="today-title">
@@ -100,106 +99,22 @@
     
     <div style="margin-top:30px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         <button onclick="exportData()" style="background:var(--success); color:white; padding:15px; border-radius:12px;">📊 EXCEL</button>
-        <button onclick="openBackup(true)" style="background:#64748b; color:white; padding:15px; border-radius:12px;">📋 YEDEĞİ AL</button>
+        <button onclick="openBackup()" style="background:#64748b; color:white; padding:15px; border-radius:12px;">📋 YEDEĞİ AL</button>
     </div>
 </div>
 
 <script>
-    let firms = JSON.parse(localStorage.getItem('isg_pro_v11')) || [];
+    // KRİTİK DÜZELTME: Veri anahtarı önceki sürümlerle aynı yapıldı (v11 serisi)
+    const KEY = 'isg_pro_v11';
+    let firms = JSON.parse(localStorage.getItem(KEY)) || [];
     let archive = JSON.parse(localStorage.getItem('isg_archive')) || {};
     let plannedGroups = JSON.parse(localStorage.getItem('isg_planned_groups')) || [];
     let currentEditId = null;
 
     function save() { 
-        localStorage.setItem('isg_pro_v11', JSON.stringify(firms)); 
+        localStorage.setItem(KEY, JSON.stringify(firms)); 
         localStorage.setItem('isg_archive', JSON.stringify(archive));
         localStorage.setItem('isg_planned_groups', JSON.stringify(plannedGroups));
-    }
-
-    function addFirm(targetGroup = null) {
-        const name = targetGroup ? prompt(`${targetGroup} için Firma Adı:`) : document.getElementById('fName').value.trim();
-        const group = targetGroup || document.getElementById('fGroup').value.trim();
-        if(!name || !group) return;
-        firms.push({ id: Date.now(), name, group, status: '', date: '', lastVisitTS: null, note: '', phone: '', email: '' });
-        save(); if(!targetGroup) document.getElementById('fName').value = ''; render();
-    }
-
-    function editFirmName(id) {
-        const f = firms.find(x => x.id === id);
-        const newName = prompt("Firma ismini düzenle:", f.name);
-        if(newName) { f.name = newName; save(); render(); }
-    }
-
-    function editGroupName(oldName) {
-        const newName = prompt("Grup ismini düzenle:", oldName);
-        if(newName && newName !== oldName) {
-            firms.forEach(f => { if(f.group === oldName) f.group = newName; });
-            plannedGroups = plannedGroups.map(g => g === oldName ? newName : g);
-            save(); render();
-        }
-    }
-
-    function togglePlan(g) {
-        if(plannedGroups.includes(g)) plannedGroups = plannedGroups.filter(x => x !== g);
-        else plannedGroups.push(g);
-        save(); render();
-    }
-
-    function clearPlan() { plannedGroups = []; save(); render(); }
-
-    function resetMonth() {
-        if(confirm("Tüm notlar arşive alınacak (Saat ikonu aktif olacak). Emin misiniz?")) {
-            firms.forEach(f => { if(f.note) archive[f.id] = f.note; });
-            firms = firms.map(f => ({...f, status: '', date: '', lastVisitTS: null, note: ''}));
-            plannedGroups = []; save(); render();
-        }
-    }
-
-    function sendWP(id) {
-        const f = firms.find(x => x.id === id);
-        const num = prompt("WhatsApp (905...):", f.phone || "90");
-        if (num === null) return;
-        f.phone = num; save();
-        if(!num || num === "90") return;
-        const msg = `Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği saha ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\n*Abdurrahman PEHLİVAN*\nA Sınıfı İş Güv. Uzm.\n_AREL OSGB_`;
-        window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-        render();
-    }
-
-    function sendMail(id) {
-        const f = firms.find(x => x.id === id);
-        const mail = prompt("E-Posta Adresi:", f.email || "");
-        if (mail === null) return;
-        f.email = mail; save();
-        if(!mail) return;
-        setStatus(id, 'M', false);
-        const body = `Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği saha ziyareti için gelinmiş ancak ilgili kişilere ulaşılamamıştır.\n\nBilgilerinize sunar, iyi çalışmalar dileriz.\n\nAbdurrahman PEHLİVAN\nA Sınıfı İş Güv. Uzm.\nAREL OSGB`;
-        window.location.href = `mailto:${mail}?subject=ISG Saha Ziyareti&body=${encodeURIComponent(body)}`;
-        render();
-    }
-
-    function openNote(id) {
-        currentEditId = id;
-        const f = firms.find(x => x.id === id);
-        document.getElementById('noteEditorArea').value = f.note || "";
-        document.getElementById('modalOverlay').style.display = 'block';
-        document.getElementById('noteModal').style.display = 'block';
-    }
-
-    function saveNote() {
-        const f = firms.find(x => x.id === currentEditId);
-        f.note = document.getElementById('noteEditorArea').value;
-        save(); closeModals(); render();
-    }
-
-    function setStatus(id, stat, doRender = true) {
-        const i = firms.findIndex(f => f.id === id);
-        firms[i].status = (firms[i].status === stat) ? '' : stat;
-        if(firms[i].status !== '') {
-            firms[i].date = new Date().toLocaleDateString('tr-TR');
-            firms[i].lastVisitTS = Date.now();
-        }
-        save(); if(doRender) render();
     }
 
     function render() {
@@ -273,9 +188,95 @@
         document.getElementById('existingGroups').innerHTML = groups.map(g => `<option value="${g}">`).join('');
     }
 
+    function addFirm(targetGroup = null) {
+        const name = targetGroup ? prompt(`${targetGroup} için Firma Adı:`) : document.getElementById('fName').value.trim();
+        const group = targetGroup || document.getElementById('fGroup').value.trim();
+        if(!name || !group) return;
+        firms.push({ id: Date.now(), name, group, status: '', date: '', lastVisitTS: null, note: '', phone: '', email: '' });
+        save(); if(!targetGroup) document.getElementById('fName').value = ''; render();
+    }
+
+    function editFirmName(id) {
+        const f = firms.find(x => x.id === id);
+        const n = prompt("Düzenle:", f.name);
+        if(n) { f.name = n; save(); render(); }
+    }
+
+    function editGroupName(old) {
+        const n = prompt("Grup İsmini Düzenle:", old);
+        if(n && n !== old) {
+            firms.forEach(f => { if(f.group === old) f.group = n; });
+            plannedGroups = plannedGroups.map(g => g === old ? n : g);
+            save(); render();
+        }
+    }
+
+    function togglePlan(g) {
+        if(plannedGroups.includes(g)) plannedGroups = plannedGroups.filter(x => x !== g);
+        else plannedGroups.push(g);
+        save(); render();
+    }
+
+    function clearPlan() { plannedGroups = []; save(); render(); }
+
+    function resetMonth() {
+        if(confirm("Tüm notlar arşive alınacak ve liste sıfırlanacak. Emin misiniz?")) {
+            firms.forEach(f => { if(f.note) archive[f.id] = f.note; });
+            firms = firms.map(f => ({...f, status: '', date: '', lastVisitTS: null, note: ''}));
+            plannedGroups = []; save(); render();
+        }
+    }
+
+    function setStatus(id, stat, doR = true) {
+        const i = firms.findIndex(f => f.id === id);
+        firms[i].status = (firms[i].status === stat) ? '' : stat;
+        if(firms[i].status !== '') {
+            firms[i].date = new Date().toLocaleDateString('tr-TR');
+            firms[i].lastVisitTS = Date.now();
+        }
+        save(); if(doR) render();
+    }
+
+    function sendWP(id) {
+        const f = firms.find(x => x.id === id);
+        const n = prompt("WhatsApp:", f.phone || "90");
+        if(n === null) return;
+        f.phone = n; save();
+        if(!n || n === "90") return;
+        window.open(`https://wa.me/${n}?text=${encodeURIComponent('Ziyaret yapılmıştır.')}`, '_blank');
+        render();
+    }
+
+    function sendMail(id) {
+        const f = firms.find(x => x.id === id);
+        const m = prompt("E-Posta:", f.email || "");
+        if(m === null) return;
+        f.email = m; save();
+        if(!m) return;
+        window.location.href = `mailto:${m}?subject=İSG&body=Ziyaret yapıldı.`;
+        render();
+    }
+
+    function openNote(id) {
+        currentEditId = id;
+        const f = firms.find(x => x.id === id);
+        document.getElementById('noteEditorArea').value = f.note || "";
+        document.getElementById('modalOverlay').style.display = 'block';
+        document.getElementById('noteModal').style.display = 'block';
+    }
+
+    function saveNote() {
+        const f = firms.find(x => x.id === currentEditId);
+        f.note = document.getElementById('noteEditorArea').value;
+        save(); closeModals(); render();
+    }
+
     function delFirm(id) { if(confirm("Silinsin mi?")) { firms = firms.filter(f => f.id !== id); save(); render(); } }
     function closeModals() { document.getElementById('modalOverlay').style.display='none'; document.getElementById('noteModal').style.display='none'; }
-    function render() { /* render fonksiyonu yukarıda tanımlandı */ }
+    function exportData() { /* Excel Export */ }
+    function openBackup() { alert(JSON.stringify({f:firms, a:archive})); }
+
+    render();
 </script>
-<script>render();</script> </body>
+</body>
 </html>
