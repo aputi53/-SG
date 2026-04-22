@@ -216,7 +216,9 @@
         if(n) { 
             f.phone = n; 
             save(); 
-            const wpMesaj = "Sayın Yetkili, Firmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir. İyi çalışmalar dileriz. Abdurrahman PEHLİVAN, A Sınıfı İş Güv. Uzm., AREL OSGB";
+            // Mesajı \n ile satırlara böldük:
+            const wpMesaj = "Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\nAbdurrahman PEHLİVAN\nA Sınıfı İş Güv. Uzm.\nAREL OSGB";
+            
             window.open(`https://wa.me/${n}?text=${encodeURIComponent(wpMesaj)}`, '_blank'); 
             render(); 
         } 
