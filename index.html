@@ -220,8 +220,7 @@
         
         const tarih = new Date().toLocaleDateString('tr-TR');
         const subject = "Aylık İş Güvenliği Ziyareti Hakkında";
-        const body = `Sayın Yetkili,\n\n6331 sayılı İş Sağlığı ve Güvenliği Kanunu kapsamında, firmanıza yönelik yapılması planlanan aylık zorunlu iş yeri ziyareti ve denetimi, ${tarih} tarihinde işletmenizin kapalı olması veya yetkili bir kişiye ulaşılamaması nedeniyle gerçekleştirilememiştir.\n\nİlgili yönetmelikler gereği iş sağlığı ve güvenliği hizmetlerinin aksamaması ve yasal yükümlülüklerin yerine getirilmesi adına; bir sonraki ziyaret planlaması için tarafımla iletişime geçmenizi rica ederim;
-        
+       const body = `Sayın Yetkili,\n\n6331 sayılı İş Sağlığı ve Güvenliği Kanunu kapsamında, firmanıza yönelik yapılması planlanan aylık zorunlu iş yeri ziyareti ve denetimi, ${tarih} tarihinde işletmenizin kapalı olması veya yetkili bir kişiye ulaşılamaması nedeniyle gerçekleştirilememiştir.\n\nİlgili yönetmelikler gereği iş sağlığı ve güvenliği hizmetlerinin aksamaması ve yasal yükümlülüklerin yerine getirilmesi adına; bir sonraki ziyaret planlaması için tarafımla iletişime geçmenizi rica ederim.`;        
         window.location.href = `mailto:${m}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         render();
     }
