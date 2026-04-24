@@ -145,7 +145,6 @@
             const fB = firms.filter(f => f.group === b);
             const isDoneA = fA.every(f => f.status !== '');
             const isDoneB = fB.every(f => f.status !== '');
-            
             if (isDoneA && !isDoneB) return 1; 
             if (!isDoneA && isDoneB) return -1;
             return a.localeCompare(b, undefined, {numeric:true});
@@ -166,11 +165,11 @@
                         <button class="add-btn" onclick="addFirm('${g}')">➕</button>
                     </div></div>`;
                 
-                let cardsHtml = '';
+                let groupCardsHtml = '';
                 filtered.forEach(f => {
                     let diff = f.lastVisitTS ? Math.floor((Date.now() - f.lastVisitTS) / 86400000) : -1;
                     let hist = archive[f.id] ? `<button class="hist-btn" onclick="alert('ESKİ NOT:\\n${archive[f.id]}')">🕒</button>` : '';
-                    cardsHtml += `<div class="firm-item status-${f.status}">
+                    let card = `<div class="firm-item status-${f.status}">
                         <div class="name-row"><span class="firm-name" onclick="editFirmName(${f.id})">${f.name}</span>${hist}</div>
                         <small style="font-size:11px; color:#64748b;">${diff === -1 ? 'Gidilmedi' : (diff === 0 ? 'Bugün' : diff + ' gün önce')}</small>
                         <div class="firm-note-box" onclick="openNote(${f.id})">${f.note ? '📝 ' + f.note : 'Not...'}</div>
@@ -182,9 +181,11 @@
                             <button class="btn-small m-btn" onclick="setStatus(${f.id}, 'M')">X</button>
                             <button class="btn-small del-btn" onclick="delFirm(${f.id})">🗑️</button>
                         </div></div>`;
-                    if(isPl && search === '') planDiv.innerHTML += cardsHtml;
+                    
+                    groupCardsHtml += card; // Normal listeye ekle
+                    if(isPl && search === '') planDiv.innerHTML += card; // Sadece plandaysa Üst listeye ekle
                 });
-                listDiv.innerHTML += header + cardsHtml;
+                listDiv.innerHTML += header + groupCardsHtml;
             }
         });
         document.getElementById('plannedContainer').style.display = (plannedGroups.length > 0 && search === '') ? 'block' : 'none';
@@ -216,9 +217,7 @@
         if(n) { 
             f.phone = n; 
             save(); 
-            // Mesajı \n ile satırlara böldük:
             const wpMesaj = "Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\nAbdurrahman PEHLİVAN\nA Sınıfı İş Güv. Uzm.\nAREL OSGB";
-            
             window.open(`https://wa.me/${n}?text=${encodeURIComponent(wpMesaj)}`, '_blank'); 
             render(); 
         } 
@@ -230,15 +229,12 @@
         if(m === null) return;
         f.email = m; save();
         if(!m) return;
-        
         const tarih = new Date().toLocaleDateString('tr-TR');
         const subject = "Aylık İş Güvenliği Ziyareti Hakkında";
         const body = `Sayın Yetkili,\n\n6331 sayılı İş Sağlığı ve Güvenliği Kanunu kapsamında, firmanıza yönelik yapılması planlanan aylık zorunlu iş yeri ziyareti ve denetimi, ${tarih} tarihinde işletmenizin kapalı olması veya yetkili bir kişiye ulaşılamaması nedeniyle gerçekleştirilememiştir.\n\nİlgili yönetmelikler gereği iş sağlığı ve güvenliği hizmetlerinin aksamaması ve yasal yükümlülüklerin yerine getirilmesi adına; bir sonraki ziyaret planlaması için tarafımla iletişime geçmenizi rica ederim.`;        
-        
         window.location.href = `mailto:${m}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         render();
     }
-
     render();
 </script>
 </body>
