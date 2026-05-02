@@ -168,10 +168,19 @@
                 let groupCardsHtml = '';
                 filtered.forEach(f => {
                     let diff = f.lastVisitTS ? Math.floor((Date.now() - f.lastVisitTS) / 86400000) : -1;
+                    
+                    // GÜN HESABI VE RENKLENDİRME BURADA:
+                    let diffText = 'Gidilmedi';
+                    let diffColor = '#64748b'; // Normal gri renk
+                    if(diff !== -1) {
+                        diffText = diff === 0 ? 'Bugün' : diff + ' gün önce';
+                        if(diff >= 30) diffColor = 'red'; // 30 gün ve üstü kırmızı
+                    }
+
                     let hist = archive[f.id] ? `<button class="hist-btn" onclick="alert('ESKİ NOT:\\n${archive[f.id]}')">🕒</button>` : '';
                     let card = `<div class="firm-item status-${f.status}">
                         <div class="name-row"><span class="firm-name" onclick="editFirmName(${f.id})">${f.name}</span>${hist}</div>
-                        <small style="font-size:11px; color:#64748b;">${diff === -1 ? 'Gidilmedi' : (diff === 0 ? 'Bugün' : diff + ' gün önce')}</small>
+                        <small style="font-size:11px; color:${diffColor}; font-weight:700;">${diffText}</small>
                         <div class="firm-note-box" onclick="openNote(${f.id})">${f.note ? '📝 ' + f.note : 'Not...'}</div>
                         <div class="action-btns">
                             <button class="btn-small wp-btn" onclick="sendWP(${f.id})">WP</button>
@@ -182,8 +191,8 @@
                             <button class="btn-small del-btn" onclick="delFirm(${f.id})">🗑️</button>
                         </div></div>`;
                     
-                    groupCardsHtml += card; // Normal listeye ekle
-                    if(isPl && search === '') planDiv.innerHTML += card; // Sadece plandaysa Üst listeye ekle
+                    groupCardsHtml += card; 
+                    if(isPl && search === '') planDiv.innerHTML += card; 
                 });
                 listDiv.innerHTML += header + groupCardsHtml;
             }
