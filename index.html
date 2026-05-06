@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>İSG Saha Pro v12.6.0</title>
+    <title>İSG Saha Pro v12.8.0 - Emine</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #2563eb; --success: #16a34a; --warning: #eab308; --danger: #dc2626; --dark: #1e293b; --bg: #f1f5f9; --today: #8b5cf6; --done-group: #16a34a; }
@@ -49,8 +49,7 @@
         .del-btn { background: #fee2e2; color: var(--danger); flex: 0; padding: 10px 15px; }
         #modalOverlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; padding:20px; box-sizing: border-box; }
         .custom-modal { background: white; max-width: 500px; margin: 10% auto; padding: 25px; border-radius: 20px; }
-        #noteEditorArea { width: 100%; height: 250px; margin-top: 15px; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 16px; box-sizing: border-box; outline: none; }
-        #backupText { width: 100%; height: 100px; margin-top: 10px; font-family: monospace; font-size: 10px; }
+        #noteEditorArea, #backupText { width: 100%; height: 250px; margin-top: 15px; border: 2px solid #e2e8f0; border-radius: 12px; padding: 15px; font-family: inherit; font-size: 16px; box-sizing: border-box; outline: none; }
     </style>
 </head>
 <body>
@@ -65,17 +64,18 @@
         </div>
     </div>
     <div class="custom-modal" id="backupModal" style="display:none;">
-        <h3 id="backupTitle">Veri İşlemi</h3>
-        <textarea id="backupText" placeholder="Yedek kodunu buraya yapıştırın..."></textarea>
+        <h3 id="backupTitle">İşlem Seçin</h3>
+        <p id="backupDesc" style="font-size:12px; color:#64748b;"></p>
+        <textarea id="backupText"></textarea>
         <div style="margin-top:20px; display: flex; flex-direction: column; gap:10px;">
-            <button id="backupActionBtn" style="background:var(--primary); color:white; padding:15px; border-radius:12px;">İŞLEMİ YAP</button>
+            <button id="backupActionBtn" style="background:var(--primary); color:white; padding:15px; border-radius:12px;">TAMAMLA</button>
             <button onclick="closeModals()" style="background:#f1f5f9; padding:10px; border-radius:12px;">İPTAL</button>
         </div>
     </div>
 </div>
 
 <div class="app-container">
-    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.6.0</h2>
+    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.8.0</h2>
     <div class="stats-panel">
         <div class="stat-card"><span>PERFORMANS</span><b id="percCount">%0</b></div>
         <div class="stat-card" style="color:var(--success)"><span>BİTEN</span><b id="doneCount">0</b></div>
@@ -85,7 +85,7 @@
     <button onclick="resetMonth()" style="width:100%; background:#fef2f2; color:var(--danger); border:1px solid #fee2e2; padding:12px; border-radius:12px; font-weight:800; margin-bottom:20px;">📅 YENİ AYA GEÇ (ARŞİVLE)</button>
     
     <div id="plannedContainer" class="today-section" style="display:none;">
-        <div class="today-title"><span>📍 BUGÜN GİDİLECEK GRUPLAR</span><button onclick="clearPlan()" style="background:none; color:var(--danger); border:1px solid var(--danger); padding:2px 8px; border-radius:5px; font-size:10px;">LİSTEYİ TEMİZLE</button></div>
+        <div class="today-title"><span>📍 BUGÜN GİDİLECEK GRUPLAR</span><button onclick="clearPlan()" style="background:none; color:var(--danger); border:1px solid var(--danger); padding:2px 8px; border-radius:5px; font-size:10px;">TEMİZLE</button></div>
         <div id="plannedList"></div>
     </div>
 
@@ -99,8 +99,9 @@
     <div id="list"></div>
     <div style="margin-top:30px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
         <button onclick="exportData()" style="background:var(--success); color:white; padding:15px; border-radius:12px;">📊 EXCEL</button>
+        <button onclick="openBulkDateModal()" style="background:var(--today); color:white; padding:15px; border-radius:12px;">📅 EXCEL'DEN TARİH AKTAR</button>
         <button onclick="openBackup(true)" style="background:#64748b; color:white; padding:15px; border-radius:12px;">📋 YEDEĞİ AL</button>
-        <button onclick="openBackup(false)" style="background:#475569; color:white; padding:15px; border-radius:12px; grid-column: span 2;">📥 YEDEK YÜKLE</button>
+        <button onclick="openBackup(false)" style="background:#475569; color:white; padding:15px; border-radius:12px;">📥 YEDEK YÜKLE</button>
     </div>
 </div>
 
@@ -119,34 +120,55 @@
         localStorage.setItem('isg_group_dates', JSON.stringify(groupDates));
     }
 
-    function clearPlan() {
-        const todayStr = new Date().toISOString().split('T')[0];
-        plannedGroups = [];
-        Object.keys(groupDates).forEach(g => { if(groupDates[g] === todayStr) delete groupDates[g]; });
-        save(); render();
+    function parseTurkishDate(str) {
+        const months = { "ocak":"01","şubat":"02","mart":"03","nisan":"04","mayıs":"05","haziran":"06","temmuz":"07","ağustos":"08","eylül":"09","ekim":"10","kasım":"11","aralık":"12" };
+        const p = str.toLowerCase().split(' ');
+        if(p.length >= 3) {
+            let day = p[0].padStart(2, '0');
+            let month = months[p[1]] || '01';
+            let year = p[2];
+            return `${year}-${month}-${day}`;
+        }
+        return str;
     }
 
-    function swapToToday(targetG) {
-        const todayStr = new Date().toISOString().split('T')[0];
-        let currentTodayG = Object.keys(groupDates).find(g => groupDates[g] === todayStr);
-        const oldDate = groupDates[targetG] || "";
-        groupDates[targetG] = todayStr;
-        if(currentTodayG && currentTodayG !== targetG) groupDates[currentTodayG] = oldDate;
-        if(!plannedGroups.includes(targetG)) plannedGroups.push(targetG);
-        save(); render();
-    }
-
-    function updateGDate(g, val) {
-        groupDates[g] = val;
-        const todayStr = new Date().toISOString().split('T')[0];
-        if(val === todayStr && !plannedGroups.includes(g)) plannedGroups.push(g);
-        save(); render();
-    }
-
-    function showHistory(id) {
-        const note = archive[id];
-        if(note) { alert("ESKİ NOT:\n" + note); } 
-        else { alert("Bu firmaya ait eski bir not bulunamadı."); }
+    function openBulkDateModal() {
+        document.getElementById('modalOverlay').style.display='block';
+        document.getElementById('backupModal').style.display='block';
+        document.getElementById('backupTitle').innerText = "Excel'den Tarih Aktar";
+        document.getElementById('backupDesc').innerText = "Excel'den 'Grup' ve 'Tarih' sütunlarını yapıştırın (1 veya 1. Grup fark etmez).";
+        const txt = document.getElementById('backupText');
+        txt.value = "";
+        const btn = document.getElementById('backupActionBtn');
+        btn.innerText = "GÜNCELLE";
+        btn.onclick = () => {
+            const rows = txt.value.split('\n');
+            let count = 0;
+            const groupsInSystem = [...new Set(firms.map(f => f.group))];
+            
+            rows.forEach(row => {
+                const parts = row.split('\t');
+                if(parts.length >= 2) {
+                    let gIn = parts[0].trim();
+                    let dIn = parseTurkishDate(parts[1].trim());
+                    
+                    let match = groupsInSystem.find(g => 
+                        g.toLowerCase() === gIn.toLowerCase() || 
+                        g.toLowerCase() === (gIn + ". grup").toLowerCase() ||
+                        g.toLowerCase() === (gIn + " grup").toLowerCase()
+                    );
+                    
+                    if(match && dIn) {
+                        groupDates[match] = dIn;
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        if(dIn === todayStr && !plannedGroups.includes(match)) plannedGroups.push(match);
+                        count++;
+                    }
+                }
+            });
+            alert(count + " grup güncellendi.");
+            save(); render(); closeModals();
+        };
     }
 
     function render() {
@@ -170,10 +192,8 @@
             const fB = firms.filter(f => f.group === b);
             const isDoneA = fA.every(f => f.status !== '');
             const isDoneB = fB.every(f => f.status !== '');
-            
             if (isDoneA && !isDoneB) return 1; 
             if (!isDoneA && isDoneB) return -1;
-            
             if (!isDoneA && !isDoneB) {
                 const dA = groupDates[a] || "9999-99-99";
                 const dB = groupDates[b] || "9999-99-99";
@@ -186,49 +206,20 @@
             const isPl = plannedGroups.includes(g);
             const gDate = groupDates[g] || "";
             const isToday = (gDate === todayStr);
-            const groupFirms = firms.filter(f => f.group === g);
-            const isAllDone = groupFirms.every(f => f.status !== '');
-            const filtered = groupFirms.filter(f => f.name.toLowerCase().includes(search) || g.toLowerCase().includes(search));
+            const filtered = firms.filter(f => f.group === g && (f.name.toLowerCase().includes(search) || g.toLowerCase().includes(search)));
+            const isAllDone = firms.filter(f => f.group === g).every(f => f.status !== '');
             
             if(filtered.length > 0) {
                 const statusClass = isAllDone ? 'group-completed' : 'group-pending';
-                const header = `
-                <div class="group-header ${statusClass}">
-                    <div class="group-row-top">
-                        <span class="group-name-text" onclick="editGroupName('${g}')">📂 ${g} ${isAllDone ? '(TAMAMLANDI)' : ''}</span>
-                        <div class="group-btns">
-                            <button class="plan-btn" onclick="togglePlan('${g}')" style="background:${isPl?'var(--today)':'rgba(255,255,255,0.2)'}">${isPl ? '★ PLANLI' : '☆ PLAN'}</button>
-                            <button class="add-btn" onclick="addFirm('${g}')">➕</button>
-                        </div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <input type="date" class="group-date-input" value="${gDate}" onchange="updateGDate('${g}', this.value)">
-                        ${!isToday && !isAllDone ? `<button class="swap-btn" onclick="swapToToday('${g}')">BUGÜNE AL (TAKAS)</button>` : (isToday ? '<span style="font-size:10px; font-weight:bold;">📍 BUGÜNÜN PLANI</span>' : '')}
-                    </div>
-                </div>`;
+                const header = `<div class="group-header ${statusClass}"><div class="group-row-top"><span class="group-name-text" onclick="editGroupName('${g}')">📂 ${g} ${isAllDone ? '(TAMAM)' : ''}</span><div class="group-btns"><button class="plan-btn" onclick="togglePlan('${g}')" style="background:${isPl?'var(--today)':'rgba(255,255,255,0.2)'}">${isPl ? '★ PLANLI' : '☆ PLAN'}</button><button class="add-btn" onclick="addFirm('${g}')">➕</button></div></div><div style="display:flex; justify-content:space-between; align-items:center;"><input type="date" class="group-date-input" value="${gDate}" onchange="updateGDate('${g}', this.value)">${!isToday && !isAllDone ? `<button class="swap-btn" onclick="swapToToday('${g}')">BUGÜNE AL</button>` : (isToday ? '<span style="font-size:10px; font-weight:bold;">📍 BUGÜNÜN PLANI</span>' : '')}</div></div>`;
                 
                 let groupCardsHtml = '';
                 filtered.forEach(f => {
                     let diff = f.lastVisitTS ? Math.floor((Date.now() - f.lastVisitTS) / 86400000) : -1;
-                    let diffText = 'Gidilmedi'; let diffColor = '#64748b'; 
-                    if(diff !== -1) { diffText = diff === 0 ? 'Bugün' : diff + ' gün önce'; if(diff >= 30) diffColor = 'red'; }
-
-                    let hist = archive[f.id] ? `<button class="hist-btn" onclick="showHistory(${f.id})">🕒</button>` : '';
-                    let card = `<div class="firm-item status-${f.status}">
-                        <div class="name-row"><span class="firm-name" onclick="editFirmName(${f.id})">${f.name}</span>${hist}</div>
-                        <small style="font-size:11px; color:${diffColor}; font-weight:700;">${diffText}</small>
-                        <div class="firm-note-box" onclick="openNote(${f.id})">${f.note ? '📝 ' + f.note : 'Not...'}</div>
-                        <div class="action-btns">
-                            <button class="btn-small wp-btn" onclick="sendWP(${f.id})">WP</button>
-                            <button class="btn-small mail-btn" onclick="sendMail(${f.id})">M</button>
-                            <button class="btn-small v-btn" onclick="setStatus(${f.id}, 'V')">G</button>
-                            <button class="btn-small k-btn" onclick="setStatus(${f.id}, 'K')">K</button>
-                            <button class="btn-small m-btn" onclick="setStatus(${f.id}, 'M')">X</button>
-                            <button class="btn-small del-btn" onclick="delFirm(${f.id})">🗑️</button>
-                        </div></div>`;
-                    
-                    groupCardsHtml += card; 
-                    if((isPl || isToday) && search === '' && f.status === '') planDiv.innerHTML += card; 
+                    let diffText = 'Gidilmedi'; let diffColor = '#64748b'; if(diff !== -1) { diffText = diff === 0 ? 'Bugün' : diff + ' gün önce'; if(diff >= 30) diffColor = 'red'; }
+                    let hist = archive[f.id] ? `<button class="hist-btn" onclick="alert('ESKİ NOT:\\n' + archive[${f.id}])">🕒</button>` : '';
+                    let card = `<div class="firm-item status-${f.status}"><div class="name-row"><span class="firm-name" onclick="editFirmName(${f.id})">${f.name}</span>${hist}</div><small style="font-size:11px; color:${diffColor}; font-weight:700;">${diffText}</small><div class="firm-note-box" onclick="openNote(${f.id})">${f.note ? '📝 ' + f.note : 'Not...'}</div><div class="action-btns"><button class="btn-small wp-btn" onclick="sendWP(${f.id})">WP</button><button class="btn-small mail-btn" onclick="sendMail(${f.id})">M</button><button class="btn-small v-btn" onclick="setStatus(${f.id}, 'V')">G</button><button class="btn-small k-btn" onclick="setStatus(${f.id}, 'K')">K</button><button class="btn-small m-btn" onclick="setStatus(${f.id}, 'M')">X</button><button class="btn-small del-btn" onclick="delFirm(${f.id})">🗑️</button></div></div>`;
+                    groupCardsHtml += card; if((isPl || isToday) && search === '' && f.status === '') planDiv.innerHTML += card; 
                 });
                 listDiv.innerHTML += header + groupCardsHtml;
             }
@@ -237,40 +228,23 @@
         document.getElementById('existingGroups').innerHTML = groups.map(g => `<option value="${g}">`).join('');
     }
 
-    function addFirm(targetGroup = null) {
-        const name = targetGroup ? prompt(`${targetGroup} Firma Adı:`) : document.getElementById('fName').value.trim();
-        const group = targetGroup || document.getElementById('fGroup').value.trim();
-        if(!name || !group) return;
-        firms.push({ id: Date.now(), name, group, status: '', date: '', lastVisitTS: null, note: '', phone: '', email: '', prevVisitTS: null });
-        save(); render();
-    }
-    function setStatus(id, stat) { 
-        const i = firms.findIndex(f => f.id === id); 
-        const firm = firms[i];
-        if (firm.status === stat) { firm.status = ''; firm.date = ''; firm.lastVisitTS = firm.prevVisitTS || null; } 
-        else { if (firm.status === '') firm.prevVisitTS = firm.lastVisitTS; firm.status = stat; firm.date = new Date().toLocaleDateString('tr-TR'); firm.lastVisitTS = Date.now(); }
-        save(); render(); 
-    }
-    function sendWP(id) { 
-        const f = firms.find(x => x.id === id); const n = prompt("WP:", f.phone || "90"); 
-        if(n) { f.phone = n; save(); const msg = "Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\nAbdurrahman PEHLİVAN\nA Sınıfı İş Güv. Uzm.\nAREL OSGB";
-        window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`, '_blank'); render(); } 
-    }
-    function sendMail(id) {
-        const f = firms.find(x => x.id === id); const m = prompt("E-Posta:", f.email || ""); if(m === null) return; f.email = m; save(); if(!m) return;
-        const body = `Sayın Yetkili,\n\n6331 sayılı İş Sağlığı ve Güvenliği Kanunu kapsamında, firmanıza yönelik yapılması planlanan aylık zorunlu iş yeri ziyareti, ${new Date().toLocaleDateString('tr-TR')} tarihinde işletmenizin kapalı olması veya yetkiliye ulaşılamaması nedeniyle gerçekleştirilememiştir.`;        
-        window.location.href = `mailto:${m}?subject=ISG Ziyareti&body=${encodeURIComponent(body)}`; render();
-    }
-    function editFirmName(id) { const f = firms.find(x => x.id === id); const n = prompt("Düzenle:", f.name); if(n) { f.name = n; save(); render(); } }
-    function editGroupName(old) { const n = prompt("Grup Düzenle:", old); if(n && n !== old) { firms.forEach(f => { if(f.group === old) f.group = n; }); plannedGroups = plannedGroups.map(g => g === old ? n : g); save(); render(); } }
+    function addFirm(tG = null) { const n = tG ? prompt(`${tG} Firma:`) : document.getElementById('fName').value.trim(); const g = tG || document.getElementById('fGroup').value.trim(); if(!n || !g) return; firms.push({ id: Date.now(), name: n, group: g, status: '', date: '', lastVisitTS: null, note: '', phone: '', email: '', prevVisitTS: null }); save(); render(); }
+    function setStatus(id, s) { const i = firms.findIndex(f => f.id === id); const f = firms[i]; if (f.status === s) { f.status = ''; f.date = ''; f.lastVisitTS = f.prevVisitTS || null; } else { if (f.status === '') f.prevVisitTS = f.lastVisitTS; f.status = s; f.date = new Date().toLocaleDateString('tr-TR'); f.lastVisitTS = Date.now(); } save(); render(); }
+    function sendWP(id) { const f = firms.find(x => x.id === id); const n = prompt("WP:", f.phone || "90"); if(n) { f.phone = n; save(); window.open(`https://wa.me/${n}?text=${encodeURIComponent("Sayın Yetkili,\n\nİş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar.\n\nAbdurrahman PEHLİVAN")}`, '_blank'); render(); } }
+    function sendMail(id) { const f = firms.find(x => x.id === id); const m = prompt("E-Posta:", f.email || ""); if(m) { f.email = m; save(); window.location.href = `mailto:${m}?subject=ISG Ziyareti&body=${encodeURIComponent("Sayın Yetkili,\n\n6331 sayılı Kanun kapsamında planlanan ziyaret gerçekleştirilememiştir.")}`; render(); } }
     function togglePlan(g) { if(plannedGroups.includes(g)) plannedGroups = plannedGroups.filter(x => x !== g); else plannedGroups.push(g); save(); render(); }
+    function updateGDate(g, v) { groupDates[g] = v; const t = new Date().toISOString().split('T')[0]; if(v === t && !plannedGroups.includes(g)) plannedGroups.push(g); save(); render(); }
+    function swapToToday(g) { groupDates[g] = new Date().toISOString().split('T')[0]; if(!plannedGroups.includes(g)) plannedGroups.push(g); save(); render(); }
     function openNote(id) { currentEditId = id; const f = firms.find(x => x.id === id); document.getElementById('noteEditorArea').value = f.note || ""; document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('noteModal').style.display = 'block'; }
     function saveNote() { const f = firms.find(x => x.id === currentEditId); f.note = document.getElementById('noteEditorArea').value; save(); closeModals(); render(); }
-    function resetMonth() { if(confirm("Arşivlensin mi?")) { firms.forEach(f => { if(f.note) archive[f.id] = f.note; f.prevVisitTS = f.lastVisitTS; }); firms = firms.map(f => ({...f, status: '', date: '', note: ''})); plannedGroups = []; save(); render(); } }
+    function resetMonth() { if(confirm("Arşivlensin mi?")) { firms.forEach(f => { if(f.note) archive[f.id] = f.note; f.prevVisitTS = f.lastVisitTS; f.status = ''; f.date = ''; f.note = ''; }); plannedGroups = []; save(); render(); } }
     function closeModals() { document.getElementById('modalOverlay').style.display='none'; document.getElementById('noteModal').style.display='none'; document.getElementById('backupModal').style.display='none'; }
+    function clearPlan() { plannedGroups = []; save(); render(); }
     function delFirm(id) { if(confirm("Sil?")) { firms = firms.filter(f => f.id !== id); save(); render(); } }
-    function openBackup(isExport) { document.getElementById('modalOverlay').style.display='block'; document.getElementById('backupModal').style.display='block'; const btn = document.getElementById('backupActionBtn'); const txt = document.getElementById('backupText'); if(isExport) { txt.value = JSON.stringify({f:firms, a:archive, p:plannedGroups, d:groupDates}); btn.innerText = "KOPYALA"; btn.onclick = () => { txt.select(); document.execCommand('copy'); alert("Kopyalandı!"); }; } else { txt.value = ""; btn.innerText = "YÜKLE"; btn.onclick = () => { try { const d = JSON.parse(txt.value); firms = d.f || []; archive = d.a || {}; plannedGroups = d.p || []; groupDates = d.d || {}; save(); render(); closeModals(); alert("Yüklendi!"); } catch(e) { alert("Hata!"); } }; } }
-    function exportData() { if(firms.length === 0) return; let html = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr><th>Firma</th><th>Grup</th><th>Durum</th><th>Tarih</th><th>Not</th></tr>`; firms.forEach(f => { html += `<tr><td>${f.name}</td><td>${f.group}</td><td>${f.status}</td><td>${f.date}</td><td>${f.note}</td></tr>`; }); html += "</table></body></html>"; const blob = new Blob([html], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ISG_Rapor.xls`; a.click(); }
+    function editFirmName(id) { const f = firms.find(x => x.id === id); const n = prompt("Firma:", f.name); if(n) { f.name = n; save(); render(); } }
+    function editGroupName(o) { const n = prompt("Grup:", o); if(n) { firms.forEach(f => { if(f.group === o) f.group = n; }); plannedGroups = plannedGroups.map(g => g === o ? n : g); save(); render(); } }
+    function openBackup(e) { document.getElementById('modalOverlay').style.display='block'; document.getElementById('backupModal').style.display='block'; const btn = document.getElementById('backupActionBtn'); const txt = document.getElementById('backupText'); if(e) { txt.value = JSON.stringify({f:firms, a:archive, p:plannedGroups, d:groupDates}); btn.onclick = () => { txt.select(); document.execCommand('copy'); alert("Kopyalandı!"); }; } else { txt.value = ""; btn.onclick = () => { try { const d = JSON.parse(txt.value); firms = d.f || []; archive = d.a || []; plannedGroups = d.p || []; groupDates = d.d || {}; save(); render(); closeModals(); alert("Yüklendi!"); } catch(e) { alert("Hata!"); } }; } }
+    function exportData() { if(firms.length === 0) return; let h = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr><th>Firma</th><th>Grup</th><th>Durum</th><th>Tarih</th><th>Not</th></tr>`; firms.forEach(f => { h += `<tr><td>${f.name}</td><td>${f.group}</td><td>${f.status}</td><td>${f.date}</td><td>${f.note}</td></tr>`; }); h += "</table></body></html>"; const b = new Blob([h], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `ISG_Rapor.xls`; a.click(); }
     render();
 </script>
 </body>
