@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>İSG Saha Pro v12.5.0 - Tam Sürüm</title>
+    <title>İSG Saha Pro v12.6.0</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #2563eb; --success: #16a34a; --warning: #eab308; --danger: #dc2626; --dark: #1e293b; --bg: #f1f5f9; --today: #8b5cf6; --done-group: #16a34a; }
@@ -30,7 +30,6 @@
         .add-btn { background: rgba(255,255,255,0.2); color: white; width: 30px; height: 30px; border-radius: 8px; font-size: 16px; border: 1px solid rgba(255,255,255,0.3); }
         .swap-btn { background: #fff; color: #000; border: none; padding: 4px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; cursor: pointer; }
         .group-date-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 5px; padding: 2px; font-size: 11px; }
-        
         .firm-item { display: flex; flex-direction: column; padding: 15px; border: 1px solid #e2e8f0; border-radius: 15px; margin-bottom: 10px; background: white; border-left: 6px solid #cbd5e1; }
         .status-V { border-left-color: var(--success); background: #f0fdf4; }
         .status-K { border-left-color: var(--warning); background: #fefce8; }
@@ -76,7 +75,7 @@
 </div>
 
 <div class="app-container">
-    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.5.0</h2>
+    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.6.0</h2>
     <div class="stats-panel">
         <div class="stat-card"><span>PERFORMANS</span><b id="percCount">%0</b></div>
         <div class="stat-card" style="color:var(--success)"><span>BİTEN</span><b id="doneCount">0</b></div>
@@ -86,7 +85,7 @@
     <button onclick="resetMonth()" style="width:100%; background:#fef2f2; color:var(--danger); border:1px solid #fee2e2; padding:12px; border-radius:12px; font-weight:800; margin-bottom:20px;">📅 YENİ AYA GEÇ (ARŞİVLE)</button>
     
     <div id="plannedContainer" class="today-section" style="display:none;">
-        <div class="today-title"><span>📍 BUGÜN GİDİLECEK GRUPLAR</span><button onclick="clearPlan()" style="background:none; color:var(--danger); border:1px solid var(--danger); padding:2px 8px; border-radius:5px; font-size:10px;">TEMİZLE</button></div>
+        <div class="today-title"><span>📍 BUGÜN GİDİLECEK GRUPLAR</span><button onclick="clearPlan()" style="background:none; color:var(--danger); border:1px solid var(--danger); padding:2px 8px; border-radius:5px; font-size:10px;">LİSTEYİ TEMİZLE</button></div>
         <div id="plannedList"></div>
     </div>
 
@@ -106,19 +105,8 @@
 </div>
 
 <script>
-    // --- GÜVENLİ VERİ ANAHTARI ---
-    const VERSIONS = ['isg_pro_v11', 'isg_pro_v12', 'isg_pro_v12_3', 'isg_pro_v12_4', 'isg_saha_pro_final'];
-    let KEY = 'isg_pro_v11'; // Senin orijinal anahtarın
-    
+    const KEY = 'isg_pro_v11'; 
     let firms = JSON.parse(localStorage.getItem(KEY)) || [];
-    // Eğer veriler başka bir anahtardaysa onları çek
-    if(firms.length === 0) {
-        for(let k of VERSIONS) {
-            let d = JSON.parse(localStorage.getItem(k));
-            if(d && d.length > 0) { firms = d; break; }
-        }
-    }
-
     let archive = JSON.parse(localStorage.getItem('isg_archive')) || {};
     let plannedGroups = JSON.parse(localStorage.getItem('isg_planned_groups')) || [];
     let groupDates = JSON.parse(localStorage.getItem('isg_group_dates')) || {};
@@ -129,6 +117,13 @@
         localStorage.setItem('isg_archive', JSON.stringify(archive));
         localStorage.setItem('isg_planned_groups', JSON.stringify(plannedGroups));
         localStorage.setItem('isg_group_dates', JSON.stringify(groupDates));
+    }
+
+    function clearPlan() {
+        const todayStr = new Date().toISOString().split('T')[0];
+        plannedGroups = [];
+        Object.keys(groupDates).forEach(g => { if(groupDates[g] === todayStr) delete groupDates[g]; });
+        save(); render();
     }
 
     function swapToToday(targetG) {
@@ -146,6 +141,12 @@
         const todayStr = new Date().toISOString().split('T')[0];
         if(val === todayStr && !plannedGroups.includes(g)) plannedGroups.push(g);
         save(); render();
+    }
+
+    function showHistory(id) {
+        const note = archive[id];
+        if(note) { alert("ESKİ NOT:\n" + note); } 
+        else { alert("Bu firmaya ait eski bir not bulunamadı."); }
     }
 
     function render() {
@@ -169,8 +170,15 @@
             const fB = firms.filter(f => f.group === b);
             const isDoneA = fA.every(f => f.status !== '');
             const isDoneB = fB.every(f => f.status !== '');
+            
             if (isDoneA && !isDoneB) return 1; 
             if (!isDoneA && isDoneB) return -1;
+            
+            if (!isDoneA && !isDoneB) {
+                const dA = groupDates[a] || "9999-99-99";
+                const dB = groupDates[b] || "9999-99-99";
+                if(dA !== dB) return dA.localeCompare(dB);
+            }
             return a.localeCompare(b, undefined, {numeric:true});
         });
 
@@ -195,21 +203,17 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <input type="date" class="group-date-input" value="${gDate}" onchange="updateGDate('${g}', this.value)">
-                        ${!isToday ? `<button class="swap-btn" onclick="swapToToday('${g}')">BUGÜNE AL (TAKAS)</button>` : '<span style="font-size:10px; font-weight:bold;">📍 BUGÜNÜN PLANI</span>'}
+                        ${!isToday && !isAllDone ? `<button class="swap-btn" onclick="swapToToday('${g}')">BUGÜNE AL (TAKAS)</button>` : (isToday ? '<span style="font-size:10px; font-weight:bold;">📍 BUGÜNÜN PLANI</span>' : '')}
                     </div>
                 </div>`;
                 
                 let groupCardsHtml = '';
                 filtered.forEach(f => {
                     let diff = f.lastVisitTS ? Math.floor((Date.now() - f.lastVisitTS) / 86400000) : -1;
-                    let diffText = 'Gidilmedi';
-                    let diffColor = '#64748b'; 
-                    if(diff !== -1) {
-                        diffText = diff === 0 ? 'Bugün' : diff + ' gün önce';
-                        if(diff >= 30) diffColor = 'red'; 
-                    }
+                    let diffText = 'Gidilmedi'; let diffColor = '#64748b'; 
+                    if(diff !== -1) { diffText = diff === 0 ? 'Bugün' : diff + ' gün önce'; if(diff >= 30) diffColor = 'red'; }
 
-                    let hist = archive[f.id] ? `<button class="hist-btn" onclick="alert('ESKİ NOT:\\n${archive[f.id]}')">🕒</button>` : '';
+                    let hist = archive[f.id] ? `<button class="hist-btn" onclick="showHistory(${f.id})">🕒</button>` : '';
                     let card = `<div class="firm-item status-${f.status}">
                         <div class="name-row"><span class="firm-name" onclick="editFirmName(${f.id})">${f.name}</span>${hist}</div>
                         <small style="font-size:11px; color:${diffColor}; font-weight:700;">${diffText}</small>
@@ -224,16 +228,15 @@
                         </div></div>`;
                     
                     groupCardsHtml += card; 
-                    if((isPl || isToday) && search === '') planDiv.innerHTML += card; 
+                    if((isPl || isToday) && search === '' && f.status === '') planDiv.innerHTML += card; 
                 });
                 listDiv.innerHTML += header + groupCardsHtml;
             }
         });
-        document.getElementById('plannedContainer').style.display = ((plannedGroups.length > 0 || planDiv.innerHTML !== '') && search === '') ? 'block' : 'none';
+        document.getElementById('plannedContainer').style.display = (planDiv.innerHTML !== '' && search === '') ? 'block' : 'none';
         document.getElementById('existingGroups').innerHTML = groups.map(g => `<option value="${g}">`).join('');
     }
 
-    // --- SENİN ORİJİNAL FONKSİYONLARIN (HİÇ DOKUNULMADI) ---
     function addFirm(targetGroup = null) {
         const name = targetGroup ? prompt(`${targetGroup} Firma Adı:`) : document.getElementById('fName').value.trim();
         const group = targetGroup || document.getElementById('fGroup').value.trim();
@@ -244,62 +247,30 @@
     function setStatus(id, stat) { 
         const i = firms.findIndex(f => f.id === id); 
         const firm = firms[i];
-        if (firm.status === stat) {
-            firm.status = ''; firm.date = '';
-            firm.lastVisitTS = firm.prevVisitTS || null;
-        } else {
-            if (firm.status === '') firm.prevVisitTS = firm.lastVisitTS;
-            firm.status = stat;
-            firm.date = new Date().toLocaleDateString('tr-TR');
-            firm.lastVisitTS = Date.now();
-        }
+        if (firm.status === stat) { firm.status = ''; firm.date = ''; firm.lastVisitTS = firm.prevVisitTS || null; } 
+        else { if (firm.status === '') firm.prevVisitTS = firm.lastVisitTS; firm.status = stat; firm.date = new Date().toLocaleDateString('tr-TR'); firm.lastVisitTS = Date.now(); }
         save(); render(); 
     }
     function sendWP(id) { 
-        const f = firms.find(x => x.id === id); 
-        const n = prompt("WP:", f.phone || "90"); 
-        if(n) { 
-            f.phone = n; save(); 
-            const wpMesaj = "Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\nAbdurrahman PEHLİVAN\nA Sınıfı İş Güv. Uzm.\nAREL OSGB";
-            window.open(`https://wa.me/${n}?text=${encodeURIComponent(wpMesaj)}`, '_blank'); 
-            render(); 
-        } 
+        const f = firms.find(x => x.id === id); const n = prompt("WP:", f.phone || "90"); 
+        if(n) { f.phone = n; save(); const msg = "Sayın Yetkili,\n\nFirmanıza rutin İş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar dileriz.\n\nAbdurrahman PEHLİVAN\nA Sınıfı İş Güv. Uzm.\nAREL OSGB";
+        window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`, '_blank'); render(); } 
     }
     function sendMail(id) {
-        const f = firms.find(x => x.id === id);
-        const m = prompt("E-Posta:", f.email || "");
-        if(m === null) return;
-        f.email = m; save();
-        if(!m) return;
-        const tarih = new Date().toLocaleDateString('tr-TR');
-        const subject = "Aylık İş Güvenliği Ziyareti Hakkında";
-        const body = `Sayın Yetkili,\n\n6331 sayılı İş Sağlığı ve Güvenliği Kanunu kapsamında, firmanıza yönelik yapılması planlanan aylık zorunlu iş yeri ziyareti ve denetimi, ${tarih} tarihinde işletmenizin kapalı olması veya yetkili bir kişiye ulaşılamaması nedeniyle gerçekleştirilememiştir.\n\nİlgili yönetmelikler gereği iş sağlığı ve güvenliği hizmetlerinin aksamaması ve yasal yükümlülüklerin yerine getirilmesi adına; bir sonraki ziyaret planlaması için tarafımla iletişime geçmenizi rica ederim.`;        
-        window.location.href = `mailto:${m}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        render();
+        const f = firms.find(x => x.id === id); const m = prompt("E-Posta:", f.email || ""); if(m === null) return; f.email = m; save(); if(!m) return;
+        const body = `Sayın Yetkili,\n\n6331 sayılı İş Sağlığı ve Güvenliği Kanunu kapsamında, firmanıza yönelik yapılması planlanan aylık zorunlu iş yeri ziyareti, ${new Date().toLocaleDateString('tr-TR')} tarihinde işletmenizin kapalı olması veya yetkiliye ulaşılamaması nedeniyle gerçekleştirilememiştir.`;        
+        window.location.href = `mailto:${m}?subject=ISG Ziyareti&body=${encodeURIComponent(body)}`; render();
     }
-    // DİĞER STANDARTLAR
     function editFirmName(id) { const f = firms.find(x => x.id === id); const n = prompt("Düzenle:", f.name); if(n) { f.name = n; save(); render(); } }
     function editGroupName(old) { const n = prompt("Grup Düzenle:", old); if(n && n !== old) { firms.forEach(f => { if(f.group === old) f.group = n; }); plannedGroups = plannedGroups.map(g => g === old ? n : g); save(); render(); } }
     function togglePlan(g) { if(plannedGroups.includes(g)) plannedGroups = plannedGroups.filter(x => x !== g); else plannedGroups.push(g); save(); render(); }
-    function clearPlan() { plannedGroups = []; save(); render(); }
     function openNote(id) { currentEditId = id; const f = firms.find(x => x.id === id); document.getElementById('noteEditorArea').value = f.note || ""; document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('noteModal').style.display = 'block'; }
     function saveNote() { const f = firms.find(x => x.id === currentEditId); f.note = document.getElementById('noteEditorArea').value; save(); closeModals(); render(); }
     function resetMonth() { if(confirm("Arşivlensin mi?")) { firms.forEach(f => { if(f.note) archive[f.id] = f.note; f.prevVisitTS = f.lastVisitTS; }); firms = firms.map(f => ({...f, status: '', date: '', note: ''})); plannedGroups = []; save(); render(); } }
     function closeModals() { document.getElementById('modalOverlay').style.display='none'; document.getElementById('noteModal').style.display='none'; document.getElementById('backupModal').style.display='none'; }
     function delFirm(id) { if(confirm("Sil?")) { firms = firms.filter(f => f.id !== id); save(); render(); } }
     function openBackup(isExport) { document.getElementById('modalOverlay').style.display='block'; document.getElementById('backupModal').style.display='block'; const btn = document.getElementById('backupActionBtn'); const txt = document.getElementById('backupText'); if(isExport) { txt.value = JSON.stringify({f:firms, a:archive, p:plannedGroups, d:groupDates}); btn.innerText = "KOPYALA"; btn.onclick = () => { txt.select(); document.execCommand('copy'); alert("Kopyalandı!"); }; } else { txt.value = ""; btn.innerText = "YÜKLE"; btn.onclick = () => { try { const d = JSON.parse(txt.value); firms = d.f || []; archive = d.a || {}; plannedGroups = d.p || []; groupDates = d.d || {}; save(); render(); closeModals(); alert("Yüklendi!"); } catch(e) { alert("Hata!"); } }; } }
-    function exportData() {
-        if(firms.length === 0) { alert("Veri yok!"); return; }
-        let html = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr style="background:#2563eb; color:white;"><th>Firma</th><th>Grup</th><th>Durum</th><th>Tarih</th><th>Not</th></tr>`;
-        firms.forEach(f => {
-            let s = f.status === 'V' ? 'GİDİLDİ' : (f.status === 'K' ? 'KAPALI' : (f.status === 'M' ? 'ULAŞILAMADI' : 'BEKLİYOR'));
-            html += `<tr><td>${f.name}</td><td>${f.group}</td><td>${s}</td><td>${f.date || '-'}</td><td>${f.note || ''}</td></tr>`;
-        });
-        html += "</table></body></html>";
-        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-        a.download = `ISG_Rapor_${new Date().toLocaleDateString('tr-TR')}.xls`; a.click();
-    }
+    function exportData() { if(firms.length === 0) return; let html = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr><th>Firma</th><th>Grup</th><th>Durum</th><th>Tarih</th><th>Not</th></tr>`; firms.forEach(f => { html += `<tr><td>${f.name}</td><td>${f.group}</td><td>${f.status}</td><td>${f.date}</td><td>${f.note}</td></tr>`; }); html += "</table></body></html>"; const blob = new Blob([html], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ISG_Rapor.xls`; a.click(); }
     render();
 </script>
 </body>
