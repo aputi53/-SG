@@ -85,7 +85,7 @@
     <button onclick="resetMonth()" style="width:100%; background:#fef2f2; color:var(--danger); border:1px solid #fee2e2; padding:12px; border-radius:12px; font-weight:800; margin-bottom:20px;">📅 YENİ AYA GEÇ (ARŞİVLE)</button>
     
     <div id="plannedContainer" class="today-section" style="display:none;">
-        <div class="today-title"><span>📍 BUGÜN GİDİLECEK GRUPLAR</span><button onclick="clearPlan()" style="background:none; color:var(--danger); border:1px solid var(--danger); padding:2px 8px; border-radius:5px; font-size:10px;">TEMİZLE</button></div>
+        <div class="today-title"><span id="plannedHeaderTitle">📍 BUGÜN GİDİLECEK GRUPLAR</span><button onclick="clearPlan()" style="background:none; color:var(--danger); border:1px solid var(--danger); padding:2px 8px; border-radius:5px; font-size:10px;">TEMİZLE</button></div>
         <div id="plannedList"></div>
     </div>
 
@@ -224,13 +224,21 @@
                 listDiv.innerHTML += header + groupCardsHtml;
             }
         });
+
+        let activePlannedGroup = groups.find(g => (plannedGroups.includes(g) || groupDates[g] === todayStr) && firms.some(f => f.group === g && f.status === ''));
+        if (activePlannedGroup) {
+            document.getElementById('plannedHeaderTitle').innerText = `📍 ${activePlannedGroup.toUpperCase()}`;
+        } else {
+            document.getElementById('plannedHeaderTitle').innerText = `📍 BUGÜN GİDİLECEK GRUPLAR`;
+        }
+
         document.getElementById('plannedContainer').style.display = (planDiv.innerHTML !== '' && search === '') ? 'block' : 'none';
         document.getElementById('existingGroups').innerHTML = groups.map(g => `<option value="${g}">`).join('');
     }
 
     function addFirm(tG = null) { const n = tG ? prompt(`${tG} Firma:`) : document.getElementById('fName').value.trim(); const g = tG || document.getElementById('fGroup').value.trim(); if(!n || !g) return; firms.push({ id: Date.now(), name: n, group: g, status: '', date: '', lastVisitTS: null, note: '', phone: '', email: '', prevVisitTS: null }); save(); render(); }
     function setStatus(id, s) { const i = firms.findIndex(f => f.id === id); const f = firms[i]; if (f.status === s) { f.status = ''; f.date = ''; f.lastVisitTS = f.prevVisitTS || null; } else { if (f.status === '') f.prevVisitTS = f.lastVisitTS; f.status = s; f.date = new Date().toLocaleDateString('tr-TR'); f.lastVisitTS = Date.now(); } save(); render(); }
-    function sendWP(id) { const f = firms.find(x => x.id === id); const n = prompt("WP:", f.phone || "90"); if(n) { f.phone = n; save(); window.open(`https://wa.me/${n}?text=${encodeURIComponent("Sayın Yetkili,\n\nİş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar.\n\nAbdurrahman PEHLİVAN")}`, '_blank'); render(); } }
+    function sendWP(id) { const f = firms.find(x => x.id === id); const n = prompt("WP:", f.phone || "90"); if(n) { f.phone = n; save(); window.open(`https://wa.me/${n}?text=${encodeURIComponent("Sayın Yetkili,\n\nİş Güvenliği ziyaret gerçekleştirilmiştir.\n\nİyi çalışmalar.\n\nAbdurrahman PEHLİVAN")}`, '_blank'); render(); } }
     function sendMail(id) { const f = firms.find(x => x.id === id); const m = prompt("E-Posta:", f.email || ""); if(m) { f.email = m; save(); window.location.href = `mailto:${m}?subject=ISG Ziyareti&body=${encodeURIComponent("Sayın Yetkili,\n\n6331 sayılı Kanun kapsamında planlanan ziyaret gerçekleştirilememiştir.")}`; render(); } }
     
     function togglePlan(g) { 
