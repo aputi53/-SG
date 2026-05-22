@@ -232,14 +232,60 @@
     function setStatus(id, s) { const i = firms.findIndex(f => f.id === id); const f = firms[i]; if (f.status === s) { f.status = ''; f.date = ''; f.lastVisitTS = f.prevVisitTS || null; } else { if (f.status === '') f.prevVisitTS = f.lastVisitTS; f.status = s; f.date = new Date().toLocaleDateString('tr-TR'); f.lastVisitTS = Date.now(); } save(); render(); }
     function sendWP(id) { const f = firms.find(x => x.id === id); const n = prompt("WP:", f.phone || "90"); if(n) { f.phone = n; save(); window.open(`https://wa.me/${n}?text=${encodeURIComponent("Sayın Yetkili,\n\nİş Güvenliği ziyareti gerçekleştirilmiştir.\n\nİyi çalışmalar.\n\nAbdurrahman PEHLİVAN")}`, '_blank'); render(); } }
     function sendMail(id) { const f = firms.find(x => x.id === id); const m = prompt("E-Posta:", f.email || ""); if(m) { f.email = m; save(); window.location.href = `mailto:${m}?subject=ISG Ziyareti&body=${encodeURIComponent("Sayın Yetkili,\n\n6331 sayılı Kanun kapsamında planlanan ziyaret gerçekleştirilememiştir.")}`; render(); } }
-    function togglePlan(g) { if(plannedGroups.includes(g)) plannedGroups = plannedGroups.filter(x => x !== g); else plannedGroups.push(g); save(); render(); }
-    function updateGDate(g, v) { groupDates[g] = v; const t = new Date().toISOString().split('T')[0]; if(v === t && !plannedGroups.includes(g)) plannedGroups.push(g); save(); render(); }
-    function swapToToday(g) { groupDates[g] = new Date().toISOString().split('T')[0]; if(!plannedGroups.includes(g)) plannedGroups.push(g); save(); render(); }
+    
+    function togglePlan(g) { 
+        const todayStr = new Date().toISOString().split('T')[0];
+        if(plannedGroups.includes(g)) {
+            plannedGroups = plannedGroups.filter(x => x !== g);
+            if(groupDates[g] === todayStr) groupDates[g] = "";
+        } else {
+            for(let k in groupDates) {
+                if(groupDates[k] === todayStr) groupDates[k] = "";
+            }
+            groupDates[g] = todayStr;
+            plannedGroups = [g];
+        }
+        save(); render();
+    }
+    
+    function updateGDate(g, v) { 
+        groupDates[g] = v; 
+        const todayStr = new Date().toISOString().split('T')[0]; 
+        if(v === todayStr) {
+            for(let k in groupDates) {
+                if(k !== g && groupDates[k] === todayStr) groupDates[k] = "";
+            }
+            plannedGroups = [g];
+        } else {
+            plannedGroups = plannedGroups.filter(x => x !== g);
+        }
+        save(); render(); 
+    }
+    
+    function swapToToday(g) { 
+        const todayStr = new Date().toISOString().split('T')[0]; 
+        for(let k in groupDates) {
+            if(groupDates[k] === todayStr) groupDates[k] = "";
+        }
+        groupDates[g] = todayStr; 
+        plannedGroups = [g]; 
+        save(); render(); 
+    }
+    
     function openNote(id) { currentEditId = id; const f = firms.find(x => x.id === id); document.getElementById('noteEditorArea').value = f.note || ""; document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('noteModal').style.display = 'block'; }
     function saveNote() { const f = firms.find(x => x.id === currentEditId); f.note = document.getElementById('noteEditorArea').value; save(); closeModals(); render(); }
     function resetMonth() { if(confirm("Arşivlensin mi?")) { firms.forEach(f => { if(f.note) archive[f.id] = f.note; f.prevVisitTS = f.lastVisitTS; f.status = ''; f.date = ''; f.note = ''; }); plannedGroups = []; save(); render(); } }
     function closeModals() { document.getElementById('modalOverlay').style.display='none'; document.getElementById('noteModal').style.display='none'; document.getElementById('backupModal').style.display='none'; }
-    function clearPlan() { plannedGroups = []; save(); render(); }
+    
+    function clearPlan() { 
+        plannedGroups = []; 
+        const todayStr = new Date().toISOString().split('T')[0];
+        for(let g in groupDates) {
+            if(groupDates[g] === todayStr) groupDates[g] = "";
+        }
+        save(); render(); 
+    }
+    
     function delFirm(id) { if(confirm("Sil?")) { firms = firms.filter(f => f.id !== id); save(); render(); } }
     function editFirmName(id) { const f = firms.find(x => x.id === id); const n = prompt("Firma:", f.name); if(n) { f.name = n; save(); render(); } }
     function editGroupName(o) { const n = prompt("Grup:", o); if(n) { firms.forEach(f => { if(f.group === o) f.group = n; }); plannedGroups = plannedGroups.map(g => g === o ? n : g); save(); render(); } }
