@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>İSG Saha Pro v12.8.0 - Emine</title>
+    <title>İSG Saha Pro v12.8.1 - Emine</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #2563eb; --success: #16a34a; --warning: #eab308; --danger: #dc2626; --dark: #1e293b; --bg: #f1f5f9; --today: #8b5cf6; --done-group: #16a34a; }
@@ -75,7 +75,7 @@
 </div>
 
 <div class="app-container">
-    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.8.0</h2>
+    <h2 style="text-align:center; margin-bottom:20px;">👷 İSG Saha Pro v12.8.1</h2>
     <div class="stats-panel">
         <div class="stat-card"><span>PERFORMANS</span><b id="percCount">%0</b></div>
         <div class="stat-card" style="color:var(--success)"><span>BİTEN</span><b id="doneCount">0</b></div>
@@ -111,6 +111,7 @@
     let archive = JSON.parse(localStorage.getItem('isg_archive')) || {};
     let plannedGroups = JSON.parse(localStorage.getItem('isg_planned_groups')) || [];
     let groupDates = JSON.parse(localStorage.getItem('isg_group_dates')) || {};
+    let groupPrevDates = JSON.parse(localStorage.getItem('isg_group_prev_dates')) || {};
     let currentEditId = null;
 
     function save() { 
@@ -118,6 +119,7 @@
         localStorage.setItem('isg_archive', JSON.stringify(archive));
         localStorage.setItem('isg_planned_groups', JSON.stringify(plannedGroups));
         localStorage.setItem('isg_group_dates', JSON.stringify(groupDates));
+        localStorage.setItem('isg_group_prev_dates', JSON.stringify(groupPrevDates));
     }
 
     function parseTurkishDate(str) {
@@ -160,6 +162,7 @@
                     
                     if(match && dIn) {
                         groupDates[match] = dIn;
+                        groupPrevDates[match] = dIn;
                         const todayStr = new Date().toISOString().split('T')[0];
                         if(dIn === todayStr && !plannedGroups.includes(match)) plannedGroups.push(match);
                         count++;
@@ -245,10 +248,17 @@
         const todayStr = new Date().toISOString().split('T')[0];
         if(plannedGroups.includes(g)) {
             plannedGroups = plannedGroups.filter(x => x !== g);
-            if(groupDates[g] === todayStr) groupDates[g] = "";
+            if(groupDates[g] === todayStr) {
+                groupDates[g] = groupPrevDates[g] || "";
+            }
         } else {
             for(let k in groupDates) {
-                if(groupDates[k] === todayStr) groupDates[k] = "";
+                if(groupDates[k] === todayStr) {
+                    groupDates[k] = groupPrevDates[k] || "";
+                }
+            }
+            if(groupDates[g] !== todayStr) {
+                groupPrevDates[g] = groupDates[g] || "";
             }
             groupDates[g] = todayStr;
             plannedGroups = [g];
@@ -257,14 +267,21 @@
     }
     
     function updateGDate(g, v) { 
-        groupDates[g] = v; 
         const todayStr = new Date().toISOString().split('T')[0]; 
         if(v === todayStr) {
             for(let k in groupDates) {
-                if(k !== g && groupDates[k] === todayStr) groupDates[k] = "";
+                if(k !== g && groupDates[k] === todayStr) {
+                    groupDates[k] = groupPrevDates[k] || "";
+                }
             }
+            if(groupDates[g] !== todayStr) {
+                groupPrevDates[g] = groupDates[g] || "";
+            }
+            groupDates[g] = v;
             plannedGroups = [g];
         } else {
+            groupDates[g] = v; 
+            groupPrevDates[g] = v;
             plannedGroups = plannedGroups.filter(x => x !== g);
         }
         save(); render(); 
@@ -273,7 +290,12 @@
     function swapToToday(g) { 
         const todayStr = new Date().toISOString().split('T')[0]; 
         for(let k in groupDates) {
-            if(groupDates[k] === todayStr) groupDates[k] = "";
+            if(groupDates[k] === todayStr) {
+                groupDates[k] = groupPrevDates[k] || "";
+            }
+        }
+        if(groupDates[g] !== todayStr) {
+            groupPrevDates[g] = groupDates[g] || "";
         }
         groupDates[g] = todayStr; 
         plannedGroups = [g]; 
@@ -282,14 +304,16 @@
     
     function openNote(id) { currentEditId = id; const f = firms.find(x => x.id === id); document.getElementById('noteEditorArea').value = f.note || ""; document.getElementById('modalOverlay').style.display = 'block'; document.getElementById('noteModal').style.display = 'block'; }
     function saveNote() { const f = firms.find(x => x.id === currentEditId); f.note = document.getElementById('noteEditorArea').value; save(); closeModals(); render(); }
-    function resetMonth() { if(confirm("Arşivlensin mi?")) { firms.forEach(f => { if(f.note) archive[f.id] = f.note; f.prevVisitTS = f.lastVisitTS; f.status = ''; f.date = ''; f.note = ''; }); plannedGroups = []; save(); render(); } }
+    function resetMonth() { if(confirm("Arşivlensin mi?")) { firms.forEach(f => { if(f.note) archive[f.id] = f.note; f.prevVisitTS = f.lastVisitTS; f.status = ''; f.date = ''; f.note = ''; }); plannedGroups = []; groupPrevDates = {}; save(); render(); } }
     function closeModals() { document.getElementById('modalOverlay').style.display='none'; document.getElementById('noteModal').style.display='none'; document.getElementById('backupModal').style.display='none'; }
     
     function clearPlan() { 
         plannedGroups = []; 
         const todayStr = new Date().toISOString().split('T')[0];
         for(let g in groupDates) {
-            if(groupDates[g] === todayStr) groupDates[g] = "";
+            if(groupDates[g] === todayStr) {
+                groupDates[g] = groupPrevDates[g] || "";
+            }
         }
         save(); render(); 
     }
@@ -297,7 +321,7 @@
     function delFirm(id) { if(confirm("Sil?")) { firms = firms.filter(f => f.id !== id); save(); render(); } }
     function editFirmName(id) { const f = firms.find(x => x.id === id); const n = prompt("Firma:", f.name); if(n) { f.name = n; save(); render(); } }
     function editGroupName(o) { const n = prompt("Grup:", o); if(n) { firms.forEach(f => { if(f.group === o) f.group = n; }); plannedGroups = plannedGroups.map(g => g === o ? n : g); save(); render(); } }
-    function openBackup(e) { document.getElementById('modalOverlay').style.display='block'; document.getElementById('backupModal').style.display='block'; const btn = document.getElementById('backupActionBtn'); const txt = document.getElementById('backupText'); if(e) { txt.value = JSON.stringify({f:firms, a:archive, p:plannedGroups, d:groupDates}); btn.onclick = () => { txt.select(); document.execCommand('copy'); alert("Kopyalandı!"); }; } else { txt.value = ""; btn.onclick = () => { try { const d = JSON.parse(txt.value); firms = d.f || []; archive = d.a || []; plannedGroups = d.p || []; groupDates = d.d || {}; save(); render(); closeModals(); alert("Yüklendi!"); } catch(e) { alert("Hata!"); } }; } }
+    function openBackup(e) { document.getElementById('modalOverlay').style.display='block'; document.getElementById('backupModal').style.display='block'; const btn = document.getElementById('backupActionBtn'); const txt = document.getElementById('backupText'); if(e) { txt.value = JSON.stringify({f:firms, a:archive, p:plannedGroups, d:groupDates, pd:groupPrevDates}); btn.onclick = () => { txt.select(); document.execCommand('copy'); alert("Kopyalandı!"); }; } else { txt.value = ""; btn.onclick = () => { try { const d = JSON.parse(txt.value); firms = d.f || []; archive = d.a || []; plannedGroups = d.p || []; groupDates = d.d || {}; groupPrevDates = d.pd || {}; save(); render(); closeModals(); alert("Yüklendi!"); } catch(e) { alert("Hata!"); } }; } }
     function exportData() { if(firms.length === 0) return; let h = `<html><head><meta charset="utf-8"></head><body><table border="1"><tr><th>Firma</th><th>Grup</th><th>Durum</th><th>Tarih</th><th>Not</th></tr>`; firms.forEach(f => { h += `<tr><td>${f.name}</td><td>${f.group}</td><td>${f.status}</td><td>${f.date}</td><td>${f.note}</td></tr>`; }); h += "</table></body></html>"; const b = new Blob([h], { type: 'application/vnd.ms-excel' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `ISG_Rapor.xls`; a.click(); }
     render();
 </script>
